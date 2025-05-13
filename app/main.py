@@ -1,41 +1,12 @@
-import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from dotenv import load_dotenv
+from database import init_db
+from routers import router
 
-from models import Base
-
-load_dotenv()
-
-
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    raise RuntimeError("Defina a env var DATABASE_URL")
-
-
-engine = create_engine(DATABASE_URL, connect_args={"ssl": {"ca": "../ca.pem"}})
-
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine
-)
-
-Base.metadata.create_all(bind=engine)
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-from routers import router as auth_router 
-
+# Initialize DB
+init_db()
 app = FastAPI()
-
+app.include_router(router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -44,8 +15,6 @@ app.add_middleware(
     allow_credentials=True,
 )
 
-app.include_router(auth_router)
-
 @app.get("/")
 def read_root():
-    return {"message": "Auth microservice is up!"}
+    return {"message": "Treinos microservice is up!"}

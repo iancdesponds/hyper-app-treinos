@@ -1,10 +1,8 @@
+#main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from database import init_db
 from routers import router
 
-# Initialize DB
-init_db()
 app = FastAPI()
 app.include_router(router)
 app.add_middleware(

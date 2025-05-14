@@ -2,3 +2,5 @@ uvicorn[standard]
 fastapi[standard]
 pymysql
 sqlalchemy
+requests
+pyjwt

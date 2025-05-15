@@ -5,6 +5,9 @@ from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 from models import Base
 
+from models import TrainExerciseView, TrainingAvailability
+
+
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")

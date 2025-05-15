@@ -1,4 +1,4 @@
-#models.py
+# models.py
 from sqlalchemy import (
     Column, Integer, String, DateTime, Date, Time, ForeignKey, CheckConstraint, UniqueConstraint, SmallInteger
 )
@@ -69,11 +69,12 @@ class Train(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     id_user = Column(Integer, ForeignKey('user.id'))
+    name = Column(String(45))
     date = Column(Date)
+    expected_duration = Column(Integer)
     start_time = Column(Time)
     end_time = Column(Time)
     feedback = Column(Integer)
-    focus = Column(String(20))
 
     __table_args__ = (
         CheckConstraint('feedback BETWEEN 1 AND 10', name='chk_feedback_range'),
@@ -91,6 +92,7 @@ class Series(Base):
     id_exercise = Column(Integer, ForeignKey('exercise.id'))
     weight = Column(Integer)
     repetitions = Column(Integer)
+    rest_time = Column(Integer)
 
     train = relationship("Train", back_populates="series")
     exercise = relationship("Exercise")
@@ -123,21 +125,24 @@ class User(Base):
         UniqueConstraint('id_dates'),
         UniqueConstraint('id_conditions'),
         UniqueConstraint('id_password'),
+        UniqueConstraint('id'),
     )
 
 
 class TrainExerciseView(Base):
-    __tablename__ = 'Train_Exercise'  # The name of your view
+    __tablename__ = 'Train_Exercise'
     __table_args__ = {'extend_existing': True}
 
     user_id = Column(Integer, primary_key=True)
     train_id = Column(Integer, primary_key=True)
+    train_name = Column(String(45))
     series_id = Column(Integer, primary_key=True)
     exercise_id = Column(Integer, primary_key=True)
-    exercise_name = Column(String(50))
+    exercise_name = Column(String(20))
     exercise_weight = Column(Integer)
     exercise_repetitions = Column(Integer)
+    exercise_rest = Column(Integer)
+    expected_duration = Column(Integer)
     training_start = Column(Time)
     training_end = Column(Time)
-    training_focus = Column(String(20))
     training_feedback = Column(Integer)

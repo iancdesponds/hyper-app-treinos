@@ -4,7 +4,8 @@ from fastapi.encoders import jsonable_encoder
 from starlette.responses import JSONResponse
 from sqlalchemy.orm import Session
 from middleware import auth_needed
-from models import TrainExerciseView
+from models import TrainExerciseView, TrainingAvailability
+from aux import format_train_return
 from database import get_db
 from typing import Optional
 
@@ -25,9 +26,37 @@ async def get_all_treinos_by_user_id(
         if not user_id:
             raise HTTPException(status_code=400, detail="Usuario não autenticado")
 
-        treinos = db.query(TrainExerciseView).filter(TrainExerciseView.user_id == user_id).all()
-
-        return JSONResponse(content=jsonable_encoder(treinos))
+        results = {}
+        n_days = 0
+        available_days = (
+        db.query(TrainingAvailability)
+        .filter(TrainingAvailability.id == user_id) #Int representando id do user
+        .distinct()
+        .all())[0]
+        for column in TrainingAvailability.__table__.columns.keys():
+            if column != "id" and getattr(available_days, column) == user_id:
+                n_days += 1
+                results[column] = {}
+                
+        subquery = (
+            db.query(TrainExerciseView.train_id)
+            .filter(TrainExerciseView.user_id == user_id)
+            .distinct()
+            .order_by(TrainExerciseView.train_id.desc())
+            .limit(n_days)
+            .subquery()
+        )
+        treinos = (
+            db.query(TrainExerciseView)
+            .filter(
+                TrainExerciseView.user_id == user_id,
+                TrainExerciseView.train_id.in_(subquery)
+            )
+            .all()
+        )
+        results = format_train_return(treinos, results)
+        
+        return JSONResponse(content=jsonable_encoder(results))
 
     except HTTPException as e:
         raise e
@@ -37,5 +66,36 @@ async def get_all_treinos_by_user_id(
 @router.get("/debug")
 async def debug_view_test(db: Session = Depends(get_db)):
     #o int representa o id do usuario, que seria extraido do cookie
-    treinos = db.query(TrainExerciseView).filter(TrainExerciseView.user_id == 1).all()
-    return JSONResponse(content=jsonable_encoder(treinos))
+    results = {}
+    n_days = 0
+    user_id_debug = 1
+
+    available_days = (
+    db.query(TrainingAvailability)
+    .filter(TrainingAvailability.id == user_id_debug) #Int representando id do user
+    .distinct()
+    .all())[0]
+    for column in TrainingAvailability.__table__.columns.keys():
+        if column != "id" and getattr(available_days, column) == user_id_debug:
+            n_days += 1
+            results[column] = {}
+
+    subquery = (
+        db.query(TrainExerciseView.train_id)
+        .filter(TrainExerciseView.user_id == user_id_debug)
+        .distinct()
+        .order_by(TrainExerciseView.train_id.desc())
+        .limit(n_days)
+        .subquery()
+    )
+    treinos = (
+        db.query(TrainExerciseView)
+        .filter(
+            TrainExerciseView.user_id == user_id_debug,
+            TrainExerciseView.train_id.in_(subquery)
+        )
+        .all()
+    )
+    results = format_train_return(treinos, results)
+    
+    return JSONResponse(content=jsonable_encoder(results))

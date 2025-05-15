@@ -5,4 +5,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 RUN chmod +x ./uvicorn.sh
 ENV PYTHONPATH=/treinos/app
-CMD ["./uvicorn.sh"]
+CMD ["/bin/bash", "./uvicorn.sh"]

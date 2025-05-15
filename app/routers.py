@@ -5,7 +5,7 @@ from starlette.responses import JSONResponse
 from sqlalchemy.orm import Session
 from middleware import auth_needed
 from models import TrainExerciseView, TrainingAvailability
-from aux import format_train_return
+from auxiliary import format_train_return
 from database import get_db
 from typing import Optional
 

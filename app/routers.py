@@ -4,7 +4,7 @@ from fastapi.encoders import jsonable_encoder
 from starlette.responses import JSONResponse
 from sqlalchemy.orm import Session
 from middleware import auth_needed
-from models import TrainExerciseView, TrainingAvailability
+from models import TrainExerciseView, TrainingAvailability, User
 from auxiliary import format_train_return
 from database import get_db
 from typing import Optional
@@ -25,22 +25,23 @@ async def get_all_treinos_by_user_id(
         user_id = cookie.get("id")
         if not user_id:
             raise HTTPException(status_code=400, detail="Usuario não autenticado")
+        user = db.query(User).filter(User.id == user_id)
 
         results = {}
         n_days = 0
         available_days = (
         db.query(TrainingAvailability)
-        .filter(TrainingAvailability.id == user_id) #Int representando id do user
+        .filter(TrainingAvailability.id == user.id_dates) #Int representando id do user
         .distinct()
         .all())[0]
         for column in TrainingAvailability.__table__.columns.keys():
-            if column != "id" and getattr(available_days, column) == user_id:
+            if column != "id" and getattr(available_days, column) == 1:
                 n_days += 1
                 results[column] = {}
                 
         subquery = (
             db.query(TrainExerciseView.train_id)
-            .filter(TrainExerciseView.user_id == user_id)
+            .filter(TrainExerciseView.user_id == user.id)
             .distinct()
             .order_by(TrainExerciseView.train_id.desc())
             .limit(n_days)
@@ -49,7 +50,7 @@ async def get_all_treinos_by_user_id(
         treinos = (
             db.query(TrainExerciseView)
             .filter(
-                TrainExerciseView.user_id == user_id,
+                TrainExerciseView.user_id == user.id,
                 TrainExerciseView.train_id.in_(subquery)
             )
             .all()
@@ -76,7 +77,7 @@ async def debug_view_test(db: Session = Depends(get_db)):
     .distinct()
     .all())[0]
     for column in TrainingAvailability.__table__.columns.keys():
-        if column != "id" and getattr(available_days, column) == user_id_debug:
+        if column != "id" and getattr(available_days, column) == 1:
             n_days += 1
             results[column] = {}
 

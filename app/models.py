@@ -31,7 +31,7 @@ class Exercise(Base):
     __tablename__ = 'exercise'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(20), unique=True)
+    name = Column(String(90), unique=True)
 
 
 class Password(Base):
@@ -69,7 +69,7 @@ class Train(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     id_user = Column(Integer, ForeignKey('user.id'))
-    name = Column(String(45))
+    name = Column(String(90))
     date = Column(Date)
     expected_duration = Column(Integer)
     start_time = Column(Time)
@@ -104,7 +104,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     first_name = Column(String(45), nullable=False)
     last_name = Column(String(45), nullable=False)
-    username = Column(String(45), nullable=False)
+    username = Column(String(60), nullable=False)
     cpf = Column(String(45), nullable=False, unique=True)
     birth_date = Column(DateTime, nullable=False)
     email = Column(String(45), nullable=False)
@@ -135,10 +135,10 @@ class TrainExerciseView(Base):
 
     user_id = Column(Integer, primary_key=True)
     train_id = Column(Integer, primary_key=True)
-    train_name = Column(String(45))
+    train_name = Column(String(90))
     series_id = Column(Integer, primary_key=True)
     exercise_id = Column(Integer, primary_key=True)
-    exercise_name = Column(String(20))
+    exercise_name = Column(String(90))
     exercise_weight = Column(Integer)
     exercise_repetitions = Column(Integer)
     exercise_rest = Column(Integer)

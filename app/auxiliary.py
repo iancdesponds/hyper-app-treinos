@@ -1,33 +1,41 @@
 from models import TrainingAvailability
 
 def format_train_return(treinos, results):
-    used_ids = set()
-    for treino in treinos:
-        for day in results:
-            if results[day] == {} and getattr(treino, "train_id") not in used_ids:
-                results[day] = {
-                    "name": getattr(treino, "train_name"),
-                    "expected_duration": getattr(treino, "expected_duration"),
-                    "exercises": []
-                }
-                results[day]["exercises"].append(
-                    {
-                        "exercise_name": getattr(treino, "exercise_name"),
-                        "reps": getattr(treino, "exercise_repetitions"),
-                        "weight": getattr(treino, "exercise_weight"),
-                        "rest": getattr(treino, "exercise_rest")
+    # Agrupar os exercícios por train_id
+    train_map = {}
+    for t in treinos:
+        train_id = t.train_id
+        if train_id not in train_map:
+            train_map[train_id] = []
+        train_map[train_id].append(t)
+
+    ordered_train_ids = list(train_map.keys())
+    ordered_days = list(results.keys())
+
+    for day, train_id in zip(ordered_days, ordered_train_ids):
+        treinos_do_dia = train_map[train_id]
+        if treinos_do_dia:
+            results[day] = {
+                "name": treinos_do_dia[0].train_name,
+                "expected_duration": treinos_do_dia[0].expected_duration,
+                "exercises": []
+            }
+
+            # Agrupar séries por nome de exercício
+            grouped_exercises = {}
+            for t in treinos_do_dia:
+                name = t.exercise_name
+                if name not in grouped_exercises:
+                    grouped_exercises[name] = {
+                        "exercise_name": name,
+                        "reps": [],
+                        "weight": [],
+                        "rest": []
                     }
-                )
-                used_ids.add(getattr(treino, "train_id"))
-                break
-            else:
-                if "exercises" in results[day]:
-                    results[day]["exercises"].append(
-                        {
-                            "exercise_name": getattr(treino, "exercise_name"),
-                            "reps": getattr(treino, "exercise_repetitions"),
-                            "weight": getattr(treino, "exercise_weight"),
-                            "rest": getattr(treino, "exercise_rest")
-                        }
-                    )
+                grouped_exercises[name]["reps"].append(t.exercise_repetitions)
+                grouped_exercises[name]["weight"].append(t.exercise_weight)
+                grouped_exercises[name]["rest"].append(t.exercise_rest)
+
+            results[day]["exercises"] = list(grouped_exercises.values())
+
     return results

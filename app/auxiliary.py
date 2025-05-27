@@ -1,7 +1,6 @@
 from models import TrainExerciseView
 
 def format_train_return(treinos, results):
-    # Agrupar os exercícios por train_id
     train_map = {}
     for t in treinos:
         train_id = t.train_id
@@ -12,19 +11,28 @@ def format_train_return(treinos, results):
     ordered_train_ids = list(train_map.keys())
     ordered_days = list(results.keys())
 
-    for day, train_id in zip(ordered_days, ordered_train_ids):
-        treinos_do_dia = train_map[train_id]
+    for day, train_id_do_dia in zip(ordered_days, ordered_train_ids):
+        treinos_do_dia = train_map[train_id_do_dia]
         if treinos_do_dia:
+            # Supondo que TrainExerciseView tenha os campos necessários ou que você os adicione
+            # se eles forem fixos para o treino (ex: train_calories, train_muscle_groups, etc.)
+            primeiro_registro_treino = treinos_do_dia[0]
+
             results[day] = {
-                "name": treinos_do_dia[0].train_name,
-                "expected_duration": treinos_do_dia[0].expected_duration,
+                "id": train_id_do_dia,  # <--- ADICIONADO O ID DO TREINO AQUI
+                "name": primeiro_registro_treino.train_name,
+                "expected_duration": primeiro_registro_treino.expected_duration,
+                # Adicione outros campos se necessário e se estiverem disponíveis em TrainExerciseView
+                # Por exemplo, se sua view tem 'train_calories', 'train_muscle_groups', 'train_last_executed':
+                # "calories": primeiro_registro_treino.train_calories,
+                # "muscle_groups": primeiro_registro_treino.train_muscle_groups, # Pode precisar de parsing se for string JSON
+                # "last_executed": primeiro_registro_treino.train_last_executed.isoformat() if primeiro_registro_treino.train_last_executed else None,
                 "exercises": []
             }
-
-            # Agrupar séries por nome de exercício
+            
             grouped_exercises = {}
-            for t in treinos_do_dia:
-                name = t.exercise_name
+            for t_serie in treinos_do_dia:
+                name = t_serie.exercise_name
                 if name not in grouped_exercises:
                     grouped_exercises[name] = {
                         "exercise_name": name,
@@ -32,12 +40,11 @@ def format_train_return(treinos, results):
                         "weight": [],
                         "rest": []
                     }
-                grouped_exercises[name]["reps"].append(t.exercise_repetitions)
-                grouped_exercises[name]["weight"].append(t.exercise_weight)
-                grouped_exercises[name]["rest"].append(t.exercise_rest)
-
+                grouped_exercises[name]["reps"].append(t_serie.exercise_repetitions)
+                grouped_exercises[name]["weight"].append(t_serie.exercise_weight)
+                grouped_exercises[name]["rest"].append(t_serie.exercise_rest)
+            
             results[day]["exercises"] = list(grouped_exercises.values())
-
     return results
 
 

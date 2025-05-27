@@ -14,6 +14,7 @@ from models import (
     TrainingAvailability,
     User,
 )
+from datetime import datetime
 from auxiliary import format_train_return, format_train_return_total
 from database import get_db
 from typing import Optional

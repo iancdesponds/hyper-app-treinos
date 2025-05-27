@@ -1,5 +1,6 @@
 # routers.py
-from datetime import datetime, date, time
+import logging
+import traceback
 from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.encoders import jsonable_encoder
 from starlette.responses import JSONResponse
@@ -122,19 +123,19 @@ async def get_all_treinos_by_user_id(
     cookie: dict = Depends(get_user_cookie),
 ):
     try:
-        user_id = cookie["id"]
+        user_id = cookie.get("id")
         if not user_id:
             raise HTTPException(status_code=400, detail="Usuario não autenticado")
-        user = db.query(User).filter(User.id == user_id).first()
 
-        results = {}
+        user = db.query(User).filter(User.id == user_id).first()
 
         treinos = (
             db.query(TrainExerciseView)
             .filter(TrainExerciseView.user_id == user.id)
             .all()
         )
-        results = format_train_return_total(treinos, results)
+        # Chama apenas com a lista de treinos, conforme nova assinatura
+        results = format_train_return_total(treinos)
 
         return JSONResponse(content=jsonable_encoder(results))
 

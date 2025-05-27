@@ -165,7 +165,7 @@ async def conclude_train(
             db.commit()
             db.flush()
             
-            return JSONResponse({"status": "ok", "train_id": treino_db})
+            return JSONResponse({"status": "ok", "train_id": train_id})
         except Exception as e:
             db.rollback()
             raise HTTPException(status_code=500, detail=f"Erro ao salvar treino: {e}")
@@ -195,11 +195,15 @@ async def change_train_values(
                     Series.id_train == train_id, Series.id_exercise == exercicio_db.id).all()
                 counter_serie = 0
                 for serie in series:
-                    serie.weight = exercicio["series"][counter_serie]["peso"]
-                    serie.repetitions = exercicio["series"][counter_serie]["reps"]
-                    counter_serie += 1
+                    if counter_serie >= len(exercicio["series"]):
+                        db.query(Series).filter(Series.id == serie.id).delete()
+                    else:
+                        serie.weight = exercicio["series"][counter_serie]["peso"]
+                        serie.repetitions = exercicio["series"][counter_serie]["reps"]
+                        counter_serie += 1
             db.commit()
 
+            return JSONResponse({"status": "ok", "train_id": train_id})
         except Exception as e:
             db.rollback()
             raise HTTPException(status_code=500, detail=f"Erro ao salvar treino: {e}")

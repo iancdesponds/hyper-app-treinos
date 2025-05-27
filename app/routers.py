@@ -6,7 +6,7 @@ from fastapi.encoders import jsonable_encoder
 from starlette.responses import JSONResponse
 from sqlalchemy.orm import Session
 from middleware import get_user_cookie
-from models import TrainExerciseView, TrainingAvailability, User
+from models import Exercise, Series, Train, TrainExerciseView, TrainingAvailability, User
 from auxiliary import format_train_return, format_train_return_total
 from database import get_db
 from typing import Optional

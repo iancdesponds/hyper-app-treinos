@@ -1,4 +1,6 @@
 # routers.py
+import logging
+import traceback
 from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.encoders import jsonable_encoder
 from starlette.responses import JSONResponse
@@ -100,33 +102,31 @@ async def debug_view_test(db: Session = Depends(get_db)):
     
     return JSONResponse(content=jsonable_encoder(results))
 
-#get all treinos (feitos ou não)
 @router.get("/all")
 async def get_all_treinos_by_user_id(
-request: Request,
-db: Session = Depends(get_db),
-cookie: dict = Depends(get_user_cookie)
+    request: Request,
+    db: Session = Depends(get_db),
+    cookie: dict = Depends(get_user_cookie)
 ):
     try:
-        user_id = cookie["id"]
+        user_id = cookie.get("id")
         if not user_id:
             raise HTTPException(status_code=400, detail="Usuario não autenticado")
+
         user = db.query(User).filter(User.id == user_id).first()
 
-        results = {}
-
         treinos = (
-        db.query(TrainExerciseView)
-        .filter(
-        TrainExerciseView.user_id == user.id
+            db.query(TrainExerciseView)
+              .filter(TrainExerciseView.user_id == user.id)
+              .all()
         )
-        .all()
-        )
-        results = format_train_return_total(treinos, results)
+        # Chama apenas com a lista de treinos, conforme nova assinatura
+        results = format_train_return_total(treinos)
 
         return JSONResponse(content=jsonable_encoder(results))
 
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception:
+        logging.error("Erro em GET /treino/all:\n" + traceback.format_exc())
+        raise HTTPException(status_code=500, detail="Erro interno no servidor")

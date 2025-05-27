@@ -1,10 +1,11 @@
 # routers.py
+from datetime import datetime, date, time
 from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.encoders import jsonable_encoder
 from starlette.responses import JSONResponse
 from sqlalchemy.orm import Session
 from middleware import get_user_cookie
-from models import TrainExerciseView, TrainingAvailability, User
+from models import Exercise, Series, Train, TrainExerciseView, TrainingAvailability, User
 from auxiliary import format_train_return, format_train_return_total
 from database import get_db
 from typing import Optional
@@ -130,3 +131,110 @@ cookie: dict = Depends(get_user_cookie)
         raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/salvar_treino")
+async def salvar_treino(
+    request: Request,
+    db: Session = Depends(get_db),
+    cookie: dict = Depends(get_user_cookie),
+):
+    # Autenticação
+    user_id = cookie.get("id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Usuário não autenticado")
+
+    body = await request.json()
+    train_id = body.get("train_id")
+    exercicios = body.get("exercicios", [])
+    inicio_iso = body.get("inicio")
+    fim_iso = body.get("fim")
+    total_sec = body.get("tempo_total_segundos")
+
+    if train_id:
+        # Atualiza treino existente
+        treino_db = db.query(Train).filter(Train.id == train_id, Train.id_user == user_id).first()
+        if not treino_db:
+            raise HTTPException(status_code=404, detail="Treino não encontrado")
+        try:
+            # Update metadata
+            if inicio_iso:
+                dt_i = datetime.fromisoformat(inicio_iso.replace("Z", "+00:00"))
+                treino_db.start_time = dt_i.time()
+                treino_db.date = dt_i.date()
+            if fim_iso:
+                dt_f = datetime.fromisoformat(fim_iso.replace("Z", "+00:00"))
+                treino_db.end_time = dt_f.time()
+            if total_sec is not None:
+                treino_db.expected_duration = int(total_sec)
+            db.commit()
+            # Remove old series
+            db.query(Series).filter(Series.id_train == treino_db.id).delete()
+            db.commit()
+            # Insert new series
+            for ex in exercicios:
+                nome = ex.get("nome_exercicio")
+                if not nome:
+                    continue
+                ex_model = db.query(Exercise).filter(Exercise.name == nome).first()
+                if not ex_model:
+                    ex_model = Exercise(name=nome)
+                    db.add(ex_model)
+                    db.commit()
+                    db.refresh(ex_model)
+                for s in ex.get("series", []):
+                    new_s = Series(
+                        id_train=treino_db.id,
+                        id_exercise=ex_model.id,
+                        weight=float(s.get("peso", 0)),
+                        repetitions=int(s.get("reps", 0)),
+                        rest_time=int(s.get("rest_time", 0)),
+                    )
+                    db.add(new_s)
+            db.commit()
+            return JSONResponse({"status": "ok", "train_id": treino_db.id})
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(status_code=500, detail=f"Erro ao atualizar treino: {e}")
+    else:
+        # Cria novo treino
+        nome_treino = body.get("nome_treino")
+        if not nome_treino or not exercicios:
+            raise HTTPException(status_code=400, detail="Payload incompleto para criar treino")
+        try:
+            dt_i = datetime.fromisoformat(inicio_iso.replace("Z", "+00:00")) if inicio_iso else datetime.now()
+            dt_f = datetime.fromisoformat(fim_iso.replace("Z", "+00:00")) if fim_iso else datetime.now()
+            new_train = Train(
+                id_user=user_id,
+                name=nome_treino,
+                date=dt_i.date(),
+                expected_duration=int(total_sec) if total_sec else None,
+                start_time=dt_i.time(),
+                end_time=dt_f.time(),
+                feedback=None,
+            )
+            db.add(new_train)
+            db.commit()
+            db.refresh(new_train)
+            # Insert series
+            for ex in exercicios:
+                nome = ex.get("nome_exercicio")
+                ex_model = db.query(Exercise).filter(Exercise.name == nome).first()
+                if not ex_model:
+                    ex_model = Exercise(name=nome)
+                    db.add(ex_model)
+                    db.commit()
+                    db.refresh(ex_model)
+                for s in ex.get("series", []):
+                    new_s = Series(
+                        id_train=new_train.id,
+                        id_exercise=ex_model.id,
+                        weight=float(s.get("peso", 0)),
+                        repetitions=int(s.get("reps", 0)),
+                        rest_time=int(s.get("rest_time", 0)),
+                    )
+                    db.add(new_s)
+            db.commit()
+            return JSONResponse({"status": "ok", "train_id": new_train.id})
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(status_code=500, detail=f"Erro ao salvar treino: {e}")
